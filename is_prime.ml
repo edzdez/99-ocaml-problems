@@ -7,6 +7,7 @@ let rec range a b =
 
 let is_prime i =
     if i < 2 then false
+    else if i = 2 then true
     else List.filter (fun n -> i mod n = 0) (range 2 (int_of_float (sqrt (float_of_int i) +. 1.))) |> List.length = 0
 
 (*
