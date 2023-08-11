@@ -5,8 +5,6 @@ In how many ways can a group of 9 people work in 3 disjoint subgroups of 2, 3 an
 Generalize the above function in a way that we can specify a list of group sizes and the function will return a list of groups.
 *)
 
-(* TODO: currently counts the same set multiple times e.g. [a, b] <> [b, a] *)
-
 let rec range a b =
     let rec aux a b =
         if a = b then []
@@ -14,30 +12,41 @@ let rec range a b =
     in
     if a > b then aux b a else aux a b
 
-let extract lst n =
-    (List.nth lst n, List.filteri (fun i _ -> n <> i) lst)
-
-let extract_first_n lst n =
-    let rec aux acc n = function
-    | [] -> (List.rev acc, [])
-    | x :: xs as l -> if n = 0 then (List.rev acc, l) else aux (x :: acc) (n - 1) xs
+(* definitely not the most efficient way to do this *)
+let combinations n lst =
+    let b = List.length lst in
+    let rec aux curr a i =
+        if i = 0 then [List.rev curr]
+        else List.map (fun j -> aux (j :: curr) (j + 1) (i - 1)) (range a b)
+             |> List.fold_left (fun acc x -> x @ acc) []
     in
-    aux [] n lst
+    let indices = aux [] 0 n |> List.rev in
+    List.map (fun indices -> List.map (fun i -> List.nth lst i) indices) indices
 
-let rec permutations = function
-    | [] -> [[]]
-    | [x] -> [[x]]
-    | lst -> List.fold_left (fun acc h -> acc @ List.map (fun p -> h :: p) (permutations (List.filter (fun x -> h <> x) lst))) [] lst
+let rec remove_group lst = function
+    | [] -> lst
+    | x :: xs -> remove_group (lst
+        |> List.filter (fun y -> x <> y))
+        xs
 
 let group lst parts =
-    let rec aux lst = function
-    | [] -> []
-    | x :: xs ->
-        let (first, rest) = extract_first_n lst x in
-        first :: aux rest xs
+    let rec aux (lst : int list)  = function
+    | ([] : int list) -> failwith "uh oh"
+    | [x] -> combinations x lst |> List.map (fun group -> [group])
+    | (x :: xs) -> combinations x lst
+        |> List.map (fun group ->
+            let remaining = remove_group lst group in
+            let groups = aux remaining xs in
+            List.map (fun grp -> group :: grp) groups)
+        |> List.flatten
     in
-    let permutations = permutations lst in
-    permutations |> List.map (fun permutation -> aux permutation parts)
+    let groups_with_indices = aux (range 0 (List.length lst)) parts in
+    groups_with_indices
+    |> List.map (fun groups ->
+        groups
+        |> List.map (fun group ->
+            group
+            |> List.map (fun x -> List.nth lst x)))
 
 (*
 # group ["a"; "b"; "c"; "d"] [2; 1];;
